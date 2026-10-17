@@ -17,5 +17,5 @@ esac
 rm -rf "$B"
 meson setup "$B" "${COMMON[@]}" "${OPTS[@]}"
 meson compile -C "$B"
-"$B/mpv" --version | head -2
+"$B/mpv" --no-config --version | head -2
 ls -la "$B"/libmpv.so* | awk '{print $5, $9}'
