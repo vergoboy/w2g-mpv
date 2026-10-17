@@ -1,0 +1,6 @@
+[package]
+name = "w2g-sync"
+version = "0.1.0"
+edition = "2021"
+license = "LicenseRef-Proprietary"
+description = "Pure watch-party sync logic: no IO, no async, no dependencies."
