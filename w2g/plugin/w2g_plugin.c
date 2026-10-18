@@ -47,9 +47,11 @@ int mpv_open_cplugin(mpv_handle *h) {
                     .anchor_pos = atof(m->args[3]), .anchor_server_time = atof(m->args[4]),
                     .rate = atof(m->args[5]), .waiting = m->num_args > 6 ? atoi(m->args[6]) : 0 };
                 if (w2g_client_on_state(c, &s)) {
+                    /* apply the STORED room, never the incoming message: a duplicate seq must not change anything */
+                    int pl = 0; double e = w2g_client_expected(c, mono(), &pl);
                     int cur = 0; mpv_get_property(h, "pause", MPV_FORMAT_FLAG, &cur);
-                    int want = !s.playing;
-                    if (cur != want) { pause_pending = 1; pause_expected = want;
+                    int want = !pl;
+                    if (e >= 0 && cur != want) { pause_pending = 1; pause_expected = want;
                         mpv_set_property(h, "pause", MPV_FORMAT_FLAG, &want); }
                 }
             } else if (m->num_args >= 2 && !strcmp(m->args[0], "w2g-reconnect")) {

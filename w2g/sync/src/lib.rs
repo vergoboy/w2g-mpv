@@ -154,6 +154,8 @@ impl Client {
         if self.room.is_some() && st.seq < self.last_seq { return false; }
         if self.room.is_some() && st.seq == self.last_seq { return true; } // idempotent resend
         self.last_seq = st.seq;
+        // A new room decision is not a drift correction: it must not wait for the seek cooldown.
+        self.last_seek_at = None;
         self.room = Some(st);
         if self.phase == Phase::Connecting || self.phase == Phase::Syncing {
             self.phase = Phase::Ready;

@@ -181,3 +181,26 @@ fn clock_sim_p95_error_under_150ms() {
     let p95 = errs[(errs.len() as f64 * 0.95) as usize];
     assert!(p95 < 0.15, "p95 = {p95}");
 }
+
+#[test]
+fn duplicate_seq_does_not_replace_room() {
+    let a = playing_room(10.0, 0.0);
+    let mut c = ready_client(a.clone());
+    let mut forged = a.clone();
+    forged.playing = false;
+    forged.anchor_pos = 99.0;
+    assert!(c.on_state(forged));                 // same seq: accepted as a resend...
+    assert_eq!(c.room.as_ref().unwrap(), &a);    // ...but the stored room is untouched
+}
+
+#[test]
+fn new_state_bypasses_seek_cooldown() {
+    let room = playing_room(100.0, 0.0);
+    let mut c = ready_client(room.clone());
+    let Drift::Seek(t) = c.drift_action(95.0, 0.0, 10.0) else { panic!() };
+    assert_eq!(c.on_player_seek(t), SeekKind::Seeked);
+    assert_eq!(c.drift_action(95.0, 0.0, 11.0), Drift::Ok);       // drift correction: cooldown applies
+    let moved = room.apply(&Cmd::Seek { target: 5.0 }, 11.0);     // owner seeks right after
+    assert!(c.on_state(moved));
+    assert!(matches!(c.drift_action(100.0, 11.0, 11.0), Drift::Seek(x) if x == 5.0)); // no waiting
+}
