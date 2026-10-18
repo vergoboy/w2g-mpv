@@ -5,3 +5,4 @@
 - `plugin/` C plugin loaded with `--script=build/w2g/w2g.so`: applies RoomState inside mpv (pause, drift, seek, echo guard, watcher revert).
 - `server/` room sync server (WebSocket, std threads): rooms, roles, clock pong, periodic idempotent state. AUTH IS A PLACEHOLDER.
 - `tests/`  `plugin_ipc_test.py`: real mpv + plugin over IPC (controller and watcher).
+- `app/`    `w2g` CLI client: persistent login (session file, rotating refresh token), room join, sync token, launches mpv + plugin. Build with cargo >= 1.85.

@@ -1,0 +1,19 @@
+[package]
+name = "w2g-app"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0-or-later"
+description = "Watch-party client: persistent login, room join, sync token, launches the w2g mpv player."
+
+[lib]
+name = "w2g_app"
+
+[[bin]]
+name = "w2g"
+path = "src/main.rs"
+
+[dependencies]
+ureq = { version = "2", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rpassword = "7"
