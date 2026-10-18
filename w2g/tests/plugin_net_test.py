@@ -1,10 +1,14 @@
 # End-to-end: w2g-server + two real mpv instances (controller / watcher) synchronised through it.
-# Needs /tmp/t.wav. Run: W2G_MPV=build/ci/mpv python3 w2g/tests/plugin_net_test.py
+# Uses real signed room tokens (w2g-token). Needs /tmp/t.wav and `cargo build` in w2g/server. Run: W2G_MPV=build/ci/mpv python3 w2g/tests/plugin_net_test.py
 import json, os, socket, subprocess, time
 MPV = os.environ.get('W2G_MPV', 'build/ci/mpv')
 PORT = '18765'
 LIB = os.environ.get('W2G_LIBDIR', os.environ.get('LD_LIBRARY_PATH', ''))
-srv = subprocess.Popen(['w2g/server/target/debug/w2g-server'], env=dict(os.environ, W2G_BIND='127.0.0.1:' + PORT),
+SECRET = 'test-secret-test-secret-test-secret-0123'
+SRV = 'w2g/server/target/debug/'
+def token(sub, role):
+    return subprocess.check_output([SRV + 'w2g-token', sub, 'r1', role, '600'], env=dict(os.environ, W2G_SECRET=SECRET), text=True).strip()
+srv = subprocess.Popen([SRV + 'w2g-server'], env=dict(os.environ, W2G_BIND='127.0.0.1:' + PORT, W2G_SECRET=SECRET),
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(0.5)
 
@@ -33,7 +37,7 @@ class Player:
         except Exception: pass
         self.p.wait(timeout=10)
 
-ctl = Player('ctl', 'ctl:alice', 'controller'); wat = Player('wat', 'watch:bob', 'watcher')
+ctl = Player('ctl', token('alice', 'controller'), 'controller'); wat = Player('wat', token('bob', 'watcher'), 'watcher')
 res = {}
 try:
     time.sleep(2.0)                                   # connect + clock samples + first state
