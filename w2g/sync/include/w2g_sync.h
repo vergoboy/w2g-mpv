@@ -15,4 +15,12 @@ int32_t w2g_client_player_seek(W2gClient *, double target); /* 0 echo 1 own 2 us
 int32_t w2g_client_can_emit(W2gClient *, int32_t role_controller);
 double w2g_client_expected(W2gClient *, double now_server, int32_t *out_playing);
 double w2g_client_room_rate(W2gClient *);
+/* transport (built with --features net) */
+typedef struct W2gNet W2gNet;
+W2gNet *w2g_net_start(const char *url, const char *token, const char *room);
+void w2g_net_free(W2gNet *);
+int32_t w2g_net_poll_state(W2gNet *, W2gState *out);
+int32_t w2g_net_poll_reconnect(W2gNet *);
+double w2g_net_server_now(W2gNet *); /* -1 until clock synced */
+void w2g_net_send(W2gNet *, int32_t cmd, double a, uint64_t seq, int32_t ready); /* 0 play 1 pause 2 seek 3 pause_at 4 rate */
 #endif

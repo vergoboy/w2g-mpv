@@ -271,6 +271,8 @@ impl WaitGate {
 }
 
 pub mod ffi;
+#[cfg(feature = "net")]
+pub mod net;
 
 #[cfg(test)]
 mod tests;
