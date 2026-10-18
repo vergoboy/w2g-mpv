@@ -10,8 +10,8 @@ PROFILE="${1:-ci}"
 B="build/$PROFILE"
 COMMON=(-Dgpl=true -Dlibmpv=true -Dcplayer=true -Dbuild-date=false -Dtests=false)
 case "$PROFILE" in
-  ci)   OPTS=(-Dauto_features=disabled -Dgl=disabled) ;;
-  full) OPTS=(-Dauto_features=auto) ;;
+  ci)   OPTS=(-Dauto_features=disabled -Dgl=disabled -Dcplugins=enabled) ;;
+  full) OPTS=(-Dauto_features=auto -Dcplugins=enabled) ;;
   *) echo "profile must be ci|full" >&2; exit 2 ;;
 esac
 rm -rf "$B"
