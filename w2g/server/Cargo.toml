@@ -8,3 +8,6 @@ license = "GPL-2.0-or-later"
 w2g-sync = { path = "../sync" }
 tungstenite = "0.21"
 serde_json = "1"
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.21"

@@ -11,19 +11,8 @@ use std::time::{Duration, Instant};
 use tungstenite::{accept, Error as WsError, Message};
 use w2g_sync::{Cmd, Role, RoomState};
 
-pub trait Auth: Send + Sync + 'static {
-    /// token -> role, or None to reject.
-    fn role_for(&self, token: &str) -> Option<Role>;
-}
-/// Test/dev only: "ctl:*" is a controller, "watch:*" a watcher.
-pub struct PrefixAuth;
-impl Auth for PrefixAuth {
-    fn role_for(&self, t: &str) -> Option<Role> {
-        if t.starts_with("ctl:") { Some(Role::Controller) }
-        else if t.starts_with("watch:") { Some(Role::Watcher) }
-        else { None }
-    }
-}
+pub mod auth;
+pub use auth::{mint, Auth, Identity, PrefixAuth, TokenAuth};
 
 struct Room { state: RoomState, clients: Vec<(u64, Sender<String>)> }
 struct Shared { rooms: HashMap<String, Room>, next_id: u64 }
@@ -62,7 +51,7 @@ impl Server {
         let _ = stream.set_read_timeout(Some(Duration::from_millis(100)));
         let Ok(mut ws) = accept(stream) else { return };
         let (tx, rx): (Sender<String>, Receiver<String>) = channel();
-        let mut joined: Option<(String, u64, Role)> = None;
+        let mut joined: Option<(String, u64, Role, String)> = None;
         loop {
             while let Ok(m) = rx.try_recv() { if ws.send(Message::Text(m)).is_err() { return self.leave(&joined); } }
             let msg = match ws.read() {
@@ -78,11 +67,12 @@ impl Server {
                 }
                 Some("hello") if joined.is_none() => {
                     let token = v.get("token").and_then(Value::as_str).unwrap_or("");
-                    let Some(role) = self.auth.role_for(token) else {
+                    let room_id = v.get("room").and_then(Value::as_str).unwrap_or("default").to_string();
+                    let Some(who) = self.auth.verify(token, &room_id) else {
                         let _ = ws.send(Message::Text(json!({"t":"denied","why":"auth"}).to_string()));
+                        eprintln!("[w2g] rejected join room={room_id}");
                         return;
                     };
-                    let room_id = v.get("room").and_then(Value::as_str).unwrap_or("default").to_string();
                     let item = v.get("item").and_then(Value::as_str).unwrap_or("").to_string();
                     let now = self.now();
                     let mut g = self.shared.lock().unwrap();
@@ -92,10 +82,11 @@ impl Server {
                     room.clients.push((id, tx.clone()));
                     // a (re)joining client always starts from the server's fresh state
                     let _ = ws.send(Message::Text(state_json(&room.state)));
-                    joined = Some((room_id, id, role));
+                    eprintln!("[w2g] join room={room_id} sub={} role={:?} clients={}", who.sub, who.role, room.clients.len());
+                    joined = Some((room_id, id, who.role, who.sub));
                 }
                 Some("cmd") => {
-                    let Some((room_id, _, role)) = &joined else { continue };
+                    let Some((room_id, _, role, _)) = &joined else { continue };
                     let Some(cmd) = Self::parse_cmd(&v) else { continue };
                     let now = self.now();
                     let mut g = self.shared.lock().unwrap();
@@ -110,8 +101,9 @@ impl Server {
         }
     }
 
-    fn leave(&self, joined: &Option<(String, u64, Role)>) {
-        if let Some((room, id, _)) = joined {
+    fn leave(&self, joined: &Option<(String, u64, Role, String)>) {
+        if let Some((room, id, _, sub)) = joined {
+            eprintln!("[w2g] leave room={room} sub={sub}");
             let mut g = self.shared.lock().unwrap();
             if let Some(r) = g.rooms.get_mut(room) { r.clients.retain(|(i, _)| i != id); }
         }
