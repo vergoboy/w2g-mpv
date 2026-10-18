@@ -63,3 +63,16 @@ fn websocket_join_uses_the_signed_role_not_a_claimed_one() {
     ws2.send(Message::Text(json!({"t":"hello","room":"r1","token":other}).to_string())).unwrap();
     loop { if let Message::Text(t) = ws2.read().unwrap() { assert!(t.contains("denied")); break; } }
 }
+
+/// Same literal is asserted by the Python side (tests/unit/test_sync_token.py in vergoboy-stream).
+#[test]
+fn python_minted_token_verifies() {
+    const FIXTURE: &str = "v1.eyJleHAiOjQxMDI0NDQ4MDAsInJvbGUiOiJjb250cm9sbGVyIiwicm9vbSI6IlIxIiwic3ViIjoiYWxpY2UifQ.0v1oyyKGYHuqUWYEGS--xLVnOnyw3AfrSyCzaupyuRY";
+    let a = TokenAuth::new(SECRET);
+    let id = a.verify(FIXTURE, "R1").expect("token minted by the Flask side must verify");
+    assert_eq!(id.sub, "alice");
+    assert_eq!(id.role, Role::Controller);
+    assert!(a.verify(FIXTURE, "R2").is_none());
+    // and the Rust minter produces the identical bytes
+    assert_eq!(mint(SECRET, "alice", "R1", Role::Controller, 4102444800), FIXTURE);
+}
